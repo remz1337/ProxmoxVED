@@ -74,7 +74,7 @@ mkdir -p /usr/local/go2rtc/bin
 cd /usr/local/go2rtc/bin
 curl -fsSL "https://github.com/AlexxIT/go2rtc/releases/latest/download/go2rtc_linux_amd64" -o "go2rtc"
 chmod +x go2rtc
-ln -svf /usr/local/go2rtc/bin/go2rtc /usr/local/bin/go2rtc
+ln -sf /usr/local/go2rtc/bin/go2rtc /usr/local/bin/go2rtc
 msg_ok "Installed go2rtc"
 
 msg_info "Installing Tempio"
@@ -131,8 +131,11 @@ cp -r /models/ssdlite_mobilenet_v2.bin openvino-model/
 wget -q https://github.com/openvinotoolkit/open_model_zoo/raw/master/data/dataset_classes/coco_91cl_bkgr.txt -O openvino-model/coco_91cl_bkgr.txt
 sed -i 's/truck/car/g' openvino-model/coco_91cl_bkgr.txt
 # Get Audio Model and labels
-wget -qO - https://www.kaggle.com/api/v1/models/google/yamnet/tfLite/classification-tflite/1/download | tar xvz
-$STD mv 1.tflite cpu_audio_model.tflite
+#wget -qO - https://www.kaggle.com/api/v1/models/google/yamnet/tfLite/classification-tflite/1/download | tar xvz
+wget -qO - https://www.kaggle.com/api/v1/models/google/yamnet/tfLite/classification-tflite/1/download -o "yamnet-tflite-classification-tflite-v1.tar.gz"
+tar xzf yamnet-tflite-classification-tflite-v1.tar.gz
+rm -rf yamnet-tflite-classification-tflite-v1.tar.gz
+mv 1.tflite cpu_audio_model.tflite
 cp /opt/frigate/audio-labelmap.txt /audio-labelmap.txt
 msg_ok "Built Models"
 
@@ -190,7 +193,7 @@ INCLUDED_FFMPEG_VERSIONS="7.0:5.0"
 EOF
 cat <<EOF >/config/config.yml
 mqtt:
-  enabled: False
+  enabled: false
 cameras:
   test:
     ffmpeg:
@@ -208,7 +211,9 @@ cameras:
 # Optional: Authentication configuration
 auth:
   # Optional: Enable authentication
-  enabled: False
+  enabled: false
+detect:
+  enabled: false
 EOF
 msg_ok "Installed Frigate"
 
