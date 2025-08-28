@@ -103,8 +103,8 @@ cd /opt
 wget -q https://github.com/libusb/libusb/archive/v1.0.26.zip -O v1.0.26.zip
 $STD unzip v1.0.26.zip
 cd libusb-1.0.26
-./bootstrap.sh
-./configure CC='ccache gcc' CCX='ccache g++' --disable-udev --enable-shared
+$STD ./bootstrap.sh
+$STD ./configure CC='ccache gcc' CCX='ccache g++' --disable-udev --enable-shared
 $STD make -j $(nproc --all)
 cd /opt/libusb-1.0.26/libusb
 mkdir -p '/usr/local/lib'
@@ -132,7 +132,7 @@ wget -q https://github.com/openvinotoolkit/open_model_zoo/raw/master/data/datase
 sed -i 's/truck/car/g' openvino-model/coco_91cl_bkgr.txt
 # Get Audio Model and labels
 wget -qO - https://www.kaggle.com/api/v1/models/google/yamnet/tfLite/classification-tflite/1/download | tar xvz
-mv 1.tflite cpu_audio_model.tflite
+$STD mv 1.tflite cpu_audio_model.tflite
 cp /opt/frigate/audio-labelmap.txt /audio-labelmap.txt
 msg_ok "Built Models"
 
@@ -162,9 +162,9 @@ msg_ok "Built HailoRT"
 
 msg_info "Installing NodeJS"
 #NODE_VERSION="22" NODE_MODULE="yarn" setup_nodejs
-curl -SLO https://deb.nodesource.com/nsolid_setup_deb.sh
+$STD curl -SLO https://deb.nodesource.com/nsolid_setup_deb.sh
 chmod 500 nsolid_setup_deb.sh
-./nsolid_setup_deb.sh 20
+$STD ./nsolid_setup_deb.sh 20
 $STD apt-get install nodejs -y
 $STD npm install -g npm@10
 msg_ok "Installed NodeJS"
@@ -186,7 +186,7 @@ curl -fsSL "https://github.com/intel-iot-devkit/sample-videos/raw/master/person-
 echo "tmpfs   /tmp/cache      tmpfs   defaults        0       0" >>/etc/fstab
 cat <<EOF >/etc/frigate.env
 DEFAULT_FFMPEG_VERSION="7.0"
-INCLUDED_FFMPEG_VERSIONS="${DEFAULT_FFMPEG_VERSION}:5.0"
+INCLUDED_FFMPEG_VERSIONS="7.0:5.0"
 EOF
 cat <<EOF >/config/config.yml
 mqtt:
