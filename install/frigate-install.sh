@@ -18,6 +18,18 @@ msg_info "Installing Dependencies (Patience)"
 $STD apt-get install -y {jq,wget,xz-utils,python3,python3-dev,python3-distutils,gcc,pkg-config,libhdf5-dev,unzip,build-essential,automake,libtool,ccache,libusb-1.0-0-dev,apt-transport-https,python3.11,python3.11-dev,cmake,git,libgtk-3-dev,libavcodec-dev,libavformat-dev,libswscale-dev,libv4l-dev,libxvidcore-dev,libx264-dev,libjpeg-dev,libpng-dev,libtiff-dev,gfortran,openexr,libatlas-base-dev,libssl-dev,libtbbmalloc2,libtbb-dev,libdc1394-dev,libopenexr-dev,libgstreamer-plugins-base1.0-dev,libgstreamer1.0-dev,tclsh,libopenblas-dev,liblapack-dev,make,moreutils}
 msg_ok "Installed Dependencies"
 
+msg_info "Setting Up Hardware Acceleration"
+$STD apt-get -y install {va-driver-all,ocl-icd-libopencl1,intel-opencl-icd,vainfo,intel-gpu-tools}
+if [[ "$CTTYPE" == "0" ]]; then
+  chgrp video /dev/dri
+  chmod 755 /dev/dri
+  chmod 660 /dev/dri/*
+  sed -i -e 's/^kvm:x:104:$/render:x:104:root,frigate/' -e 's/^render:x:105:root$/kvm:x:105:/' /etc/group
+else
+  sed -i -e 's/^kvm:x:104:$/render:x:104:frigate/' -e 's/^render:x:105:$/kvm:x:105:/' /etc/group
+fi
+msg_ok "Set Up Hardware Acceleration"
+
 msg_info "Setting up environment"
 cd ~ && echo "export PATH=$PATH:/usr/local/bin" >> .bashrc
 source .bashrc
@@ -216,6 +228,115 @@ detect:
   enabled: false
 EOF
 msg_ok "Installed Frigate"
+
+
+source <(curl -s https://raw.githubusercontent.com/remz1337/ProxmoxVE/remz/misc/nvidia.func)
+nvidia_installed=$(check_nvidia_drivers_installed)
+if [ $nvidia_installed == 1 ]; then
+  check_nvidia_drivers_version
+  echo -e "Nvidia drivers detected. Version ${NVD_VER}"
+  msg_info "Installing Nvidia Dependencies"
+  os=""
+  if [ $PCT_OSTYPE == "debian" ]; then
+    os="debian$PCT_OSVERSION"
+  elif [ $PCT_OSTYPE == "ubuntu" ]; then
+    os_ver=$(echo "$var_version" | sed 's|\.||g')
+    os="ubuntu$os_ver"
+  fi
+  check_cuda_version
+  TARGET_CUDA_VER=$(echo $NVD_VER_CUDA | sed 's|\.|-|g')
+  $STD apt install -y gnupg
+  $STD apt-key del 7fa2af80
+  wget -q https://developer.download.nvidia.com/compute/cuda/repos/${os}/x86_64/cuda-keyring_1.1-1_all.deb
+  $STD dpkg -i cuda-keyring_1.1-1_all.deb
+  $STD apt install -y software-properties-common
+  $STD apt update
+  $STD add-apt-repository contrib
+  rm cuda-keyring_1.1-1_all.deb
+#  if grep -qR "Acquire::http::Proxy" /etc/apt/apt.conf.d/ && [ -f "/etc/apt/sources.list.d/cuda-${os}-x86_64.list" ]; then
+#    sed -i "s|https://developer|http://HTTPS///developer|g" /etc/apt/sources.list.d/cuda-${os}-x86_64.list
+#  fi
+#  $STD apt update && sleep 1
+  $STD apt update
+  $STD apt install -qqy "cuda-toolkit-$TARGET_CUDA_VER"
+  $STD apt install -qqy "cudnn-cuda-$NVD_MAJOR_CUDA"
+  export PATH=/usr/local/cuda/bin:${PATH:+:${PATH}}
+  export LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+  echo "PATH=${PATH}"  >> /etc/bash.bashrc
+  echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> /etc/bash.bashrc
+  ldconfig
+  msg_ok "Installed Nvidia Dependencies"
+
+  #######From TensorRT Dockerfile
+  #cd /opt/frigate/
+  #pip3 wheel --wheel-dir=/trt-wheels -c  /opt/frigate/docker/main/requirements-wheels.txt -r /opt/frigate/docker/tensorrt/requirements-amd64.txt
+  #pip3 uninstall -y onnxruntime-openvino tensorflow-cpu
+  #pip3 install -U /trt-wheels/*.whl
+  #cp -a /opt/frigate/docker/tensorrt/detector/rootfs/. /
+  #ldconfig
+
+  ######## To download more models
+  #cd /
+  #git clone https://github.com/NateMeyer/tensorrt_demos
+  #cd tensorrt_demos/yolo
+  #./download_yolo.sh
+  #python3 yolo_to_onnx.py -m yolov7-tiny-416
+
+  ###### Cleanup model layers
+  #wget https://raw.githubusercontent.com/microsoft/onnxruntime/refs/heads/main/tools/python/remove_initializer_from_input.py
+  #python3 remove_initializer_from_input.py --input yolov7-320.onnx --output model_fixed.onnx
+
+  cat <<EOF >>/config/config.yml
+detectors:
+  onnx:
+    type: onnx
+
+model:
+  model_type: yolo-generic
+  width: 416 # <--- should match the imgsize set during model export
+  height: 416 # <--- should match the imgsize set during model export
+  input_tensor: nchw
+  input_dtype: float
+  path: /tensorrt_demos/yolo/yolov7-tiny-416.onnx
+  labelmap_path: /labelmap/coco-80.txt
+EOF
+  
+  
+  
+  
+  
+elif grep -q -o -m1 -E 'avx[^ ]* | sse4_2' /proc/cpuinfo; then
+  msg_ok "AVX or SSE 4.2 Support Detected"
+  msg_info "Installing Openvino Object Detection Model (Resilience)"
+#  $STD pip install -r /opt/frigate/docker/main/requirements-ov.txt
+#  cd /opt/frigate/models
+#  export ENABLE_ANALYTICS=NO
+#  $STD /usr/local/bin/omz_downloader --name ssdlite_mobilenet_v2 --num_attempts 2
+#  $STD /usr/local/bin/omz_converter --name ssdlite_mobilenet_v2 --precision FP16 --mo /usr/local/bin/mo
+#  cd /
+#  cp -r /opt/frigate/models/public/ssdlite_mobilenet_v2 openvino-model
+#  curl -fsSL "https://github.com/openvinotoolkit/open_model_zoo/raw/master/data/dataset_classes/coco_91cl_bkgr.txt" -o "openvino-model/coco_91cl_bkgr.txt"
+#  sed -i 's/truck/car/g' openvino-model/coco_91cl_bkgr.txt
+  cat <<EOF >>/config/config.yml
+detectors:
+  ov:
+    type: openvino
+    device: CPU
+model:
+  width: 300
+  height: 300
+  input_tensor: nhwc
+  input_pixel_format: bgr
+  path: /openvino-model/ssdlite_mobilenet_v2.xml
+  labelmap_path: /openvino-model/coco_91cl_bkgr.txt
+EOF
+  msg_ok "Installed Openvino Object Detection Model"
+else
+  cat <<EOF >>/config/config.yml
+model:
+  path: /cpu_model.tflite
+EOF
+fi
 
 
 msg_info "Creating Services"
