@@ -132,7 +132,7 @@ wget -q https://github.com/openvinotoolkit/open_model_zoo/raw/master/data/datase
 sed -i 's/truck/car/g' openvino-model/coco_91cl_bkgr.txt
 # Get Audio Model and labels
 #wget -qO - https://www.kaggle.com/api/v1/models/google/yamnet/tfLite/classification-tflite/1/download | tar xvz
-wget -qO - https://www.kaggle.com/api/v1/models/google/yamnet/tfLite/classification-tflite/1/download -o "yamnet-tflite-classification-tflite-v1.tar.gz"
+wget -qO yamnet-tflite-classification-tflite-v1.tar.gz https://www.kaggle.com/api/v1/models/google/yamnet/tfLite/classification-tflite/1/download
 tar xzf yamnet-tflite-classification-tflite-v1.tar.gz
 rm -rf yamnet-tflite-classification-tflite-v1.tar.gz
 mv 1.tflite cpu_audio_model.tflite
