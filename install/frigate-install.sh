@@ -18,6 +18,18 @@ msg_info "Installing Dependencies (Patience)"
 $STD apt-get install -y {jq,wget,xz-utils,python3,python3-dev,python3-distutils,gcc,pkg-config,libhdf5-dev,unzip,build-essential,automake,libtool,ccache,libusb-1.0-0-dev,apt-transport-https,python3.11,python3.11-dev,cmake,git,libgtk-3-dev,libavcodec-dev,libavformat-dev,libswscale-dev,libv4l-dev,libxvidcore-dev,libx264-dev,libjpeg-dev,libpng-dev,libtiff-dev,gfortran,openexr,libatlas-base-dev,libssl-dev,libtbbmalloc2,libtbb-dev,libdc1394-dev,libopenexr-dev,libgstreamer-plugins-base1.0-dev,libgstreamer1.0-dev,tclsh,libopenblas-dev,liblapack-dev,make,moreutils}
 msg_ok "Installed Dependencies"
 
+msg_info "Setting Up Hardware Acceleration"
+$STD apt-get -y install {va-driver-all,ocl-icd-libopencl1,intel-opencl-icd,vainfo,intel-gpu-tools}
+if [[ "$CTTYPE" == "0" ]]; then
+  chgrp video /dev/dri
+  chmod 755 /dev/dri
+  chmod 660 /dev/dri/*
+  sed -i -e 's/^kvm:x:104:$/render:x:104:root,frigate/' -e 's/^render:x:105:root$/kvm:x:105:/' /etc/group
+else
+  sed -i -e 's/^kvm:x:104:$/render:x:104:frigate/' -e 's/^render:x:105:$/kvm:x:105:/' /etc/group
+fi
+msg_ok "Set Up Hardware Acceleration"
+
 msg_info "Setting up environment"
 cd ~ && echo "export PATH=$PATH:/usr/local/bin" >> .bashrc
 source .bashrc
@@ -94,7 +106,7 @@ msg_info "Downloading OpenVino Model"
 mkdir /models
 cd /models
 wget -q http://download.tensorflow.org/models/object_detection/ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz
-$STD tar -xvf ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz
+$STD tar -zxvf ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz --no-same-owner
 $STD python3 /opt/frigate/docker/main/build_ov_model.py
 msg_ok "Downloaded OpenVino Model"
 
@@ -132,7 +144,7 @@ wget -q https://github.com/openvinotoolkit/open_model_zoo/raw/master/data/datase
 sed -i 's/truck/car/g' openvino-model/coco_91cl_bkgr.txt
 # Get Audio Model and labels
 #wget -qO - https://www.kaggle.com/api/v1/models/google/yamnet/tfLite/classification-tflite/1/download | tar xvz
-wget -qO - https://www.kaggle.com/api/v1/models/google/yamnet/tfLite/classification-tflite/1/download -o "yamnet-tflite-classification-tflite-v1.tar.gz"
+wget -qO yamnet-tflite-classification-tflite-v1.tar.gz https://www.kaggle.com/api/v1/models/google/yamnet/tfLite/classification-tflite/1/download
 tar xzf yamnet-tflite-classification-tflite-v1.tar.gz
 rm -rf yamnet-tflite-classification-tflite-v1.tar.gz
 mv 1.tflite cpu_audio_model.tflite
@@ -216,6 +228,43 @@ detect:
   enabled: false
 EOF
 msg_ok "Installed Frigate"
+
+if grep -q -o -m1 -E 'avx[^ ]* | sse4_2' /proc/cpuinfo; then
+  msg_ok "AVX or SSE 4.2 Support Detected"
+  msg_info "Installing Openvino Object Detection Model (Resilience)"
+#  $STD pip install -r /opt/frigate/docker/main/requirements-ov.txt
+#  cd /opt/frigate/models
+#  export ENABLE_ANALYTICS=NO
+#  $STD /usr/local/bin/omz_downloader --name ssdlite_mobilenet_v2 --num_attempts 2
+#  $STD /usr/local/bin/omz_converter --name ssdlite_mobilenet_v2 --precision FP16 --mo /usr/local/bin/mo
+#  cd /
+#  cp -r /opt/frigate/models/public/ssdlite_mobilenet_v2 openvino-model
+#  curl -fsSL "https://github.com/openvinotoolkit/open_model_zoo/raw/master/data/dataset_classes/coco_91cl_bkgr.txt" -o "openvino-model/coco_91cl_bkgr.txt"
+#  sed -i 's/truck/car/g' openvino-model/coco_91cl_bkgr.txt
+  cat <<EOF >>/config/config.yml
+ffmpeg:
+  hwaccel_args: preset-vaapi
+detectors:
+  ov:
+    type: openvino
+    device: CPU
+model:
+  width: 300
+  height: 300
+  input_tensor: nhwc
+  input_pixel_format: bgr
+  path: /openvino-model/ssdlite_mobilenet_v2.xml
+  labelmap_path: /openvino-model/coco_91cl_bkgr.txt
+EOF
+  msg_ok "Installed Openvino Object Detection Model"
+else
+  cat <<EOF >>/config/config.yml
+ffmpeg:
+  hwaccel_args: auto
+model:
+  path: /cpu_model.tflite
+EOF
+fi
 
 
 msg_info "Creating Services"
