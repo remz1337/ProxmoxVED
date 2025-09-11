@@ -21,6 +21,9 @@ msg_ok "Installed Dependencies"
 msg_info "Setting Up Hardware Acceleration"
 $STD apt-get -y install {va-driver-all,ocl-icd-libopencl1,intel-opencl-icd,vainfo,intel-gpu-tools}
 #apt install -y vainfo libva-drm2 libva-x11-2
+#Need to add this to container config
+#lxc.cgroup2.devices.allow: c 226:* rwm
+#lxc.mount.entry: /dev/dri dev/dri none bind,optional,create=dir
 if [[ "$CTTYPE" == "0" ]]; then
   chgrp video /dev/dri
   chmod 755 /dev/dri
