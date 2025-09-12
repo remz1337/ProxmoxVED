@@ -21,9 +21,6 @@ msg_ok "Installed Dependencies"
 msg_info "Setting Up Hardware Acceleration"
 $STD apt-get -y install {va-driver-all,ocl-icd-libopencl1,intel-opencl-icd,vainfo,intel-gpu-tools}
 #apt install -y vainfo libva-drm2 libva-x11-2
-#Need to add this to container config
-#lxc.cgroup2.devices.allow: c 226:* rwm
-#lxc.mount.entry: /dev/dri dev/dri none bind,optional,create=dir
 if [[ "$CTTYPE" == "0" ]]; then
   chgrp video /dev/dri
   chmod 755 /dev/dri
@@ -155,6 +152,7 @@ msg_info "Downloading CPU Model"
 mkdir -p /models
 cd /models
 wget -qO cpu_model.tflite https://github.com/google-coral/test_data/raw/release-frogfish/ssdlite_mobiledet_coco_qat_postprocess.tflite
+cp /opt/frigate/labelmap.txt /labelmap.txt
 msg_ok "Downloaded CPU Model"
 
 msg_info "Building Audio Models"
@@ -164,7 +162,7 @@ wget -qO yamnet-tflite-classification-tflite-v1.tar.gz https://www.kaggle.com/ap
 $STD tar xzf yamnet-tflite-classification-tflite-v1.tar.gz
 rm -rf yamnet-tflite-classification-tflite-v1.tar.gz
 mv 1.tflite cpu_audio_model.tflite
-#cp /opt/frigate/audio-labelmap.txt /audio-labelmap.txt
+cp /opt/frigate/audio-labelmap.txt /audio-labelmap.txt
 msg_ok "Built Audio Models"
 
 # This should be moved to conditional block, only needed if Hailo AI module is detected
