@@ -16,11 +16,15 @@ setup_hwaccel
 
 fetch_and_deploy_gh_release "bichon" "rustmailer/bichon" "prebuild" "latest" "/opt/bichon" "bichon-*-x86_64-unknown-linux-gnu.tar.gz"
 mkdir -p /opt/bichon-data
+BICHON_ENC_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
 
 msg_info "Setting up Bichon"
 cat <<EOF >/opt/bichon/bichon.env
 BICHON_ROOT_DIR=/opt/bichon-data
 BICHON_LOG_LEVEL=info
+BICHON_ENCRYPT_PASSWORD=$BICHON_ENC_PASSWORD
+BICHON_PUBLIC_URL=http://${LOCAL_IP}:15630
+BICHON_CORS_ORIGINS=http://${LOCAL_IP}:15630
 EOF
 msg_ok "Setup Bichon"
 
