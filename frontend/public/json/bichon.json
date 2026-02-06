@@ -9,7 +9,7 @@
     "updateable": true,
     "privileged": false,
     "interface_port": 15630,
-    "documentation": "https://github.com/rustmailer/bichon/blob/main/README.md",
+    "documentation": "https://github.com/rustmailer/bichon/wiki",
     "config_path": "/opt/bichon/bichon.env",
     "website": "https://github.com/rustmailer/bichon",
     "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/bichon.webp",
