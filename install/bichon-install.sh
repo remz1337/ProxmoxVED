@@ -12,7 +12,6 @@ catch_errors
 setting_up_container
 network_check
 update_os
-setup_hwaccel
 
 fetch_and_deploy_gh_release "bichon" "rustmailer/bichon" "prebuild" "latest" "/opt/bichon" "bichon-*-x86_64-unknown-linux-gnu.tar.gz"
 mkdir -p /opt/bichon-data
