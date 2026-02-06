@@ -5,7 +5,7 @@ source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxV
 # License: MIT | https://github.com/community-scripts/ProxmoxVED/raw/main/LICENSE
 # Source: https://github.com/rustmailer/bichon
 
-APP="PowerDNS"
+APP="Bichon"
 var_tags="${var_tags:-email;archive}"
 var_cpu="${var_cpu:-1}"
 var_ram="${var_ram:-1024}"
