@@ -14,10 +14,11 @@ network_check
 update_os
 
 fetch_and_deploy_gh_release "bichon" "rustmailer/bichon" "prebuild" "latest" "/opt/bichon" "bichon-*-x86_64-unknown-linux-gnu.tar.gz"
+
+msg_info "Setting up Bichon"
 mkdir -p /opt/bichon-data
 BICHON_ENC_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
 
-msg_info "Setting up Bichon"
 cat <<EOF >/opt/bichon/bichon.env
 BICHON_ROOT_DIR=/opt/bichon-data
 BICHON_LOG_LEVEL=info
