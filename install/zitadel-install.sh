@@ -216,7 +216,7 @@ systemctl enable -q --now zitadel-api.service
 sleep 5
 
 # Enable and start Login service
-systemctl enable -q --now zitadel-login.service
+systemctl enable -q --now zitadel-login
 msg_ok "Created Services"
 
 msg_info "Saving Credentials"
